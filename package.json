@@ -1,0 +1,37 @@
+{
+  "name": "cpu-scheduling-simulator",
+  "version": "2.0.0",
+  "description": "Full-Stack CPU Scheduling Simulator — Node.js, Express, MongoDB, Socket.IO",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
+    "client": "npx --yes serve client"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.10.0",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.8.9",
+    "socket.io": "^4.6.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "cpu-scheduling",
+    "os",
+    "simulator",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "CPU Sim Team",
+  "license": "MIT"
+}

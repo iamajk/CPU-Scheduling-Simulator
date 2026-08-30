@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CPU Scheduling Simulator</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <!--
+    Backend configuration.
+    Leave empty ("") for the standalone static demo (Netlify) — every simulation
+    feature runs fully in the browser.
+    To enable the full-stack features (accounts, cloud-saved simulations, admin
+    dashboard, live Socket.IO updates) set this to the URL of a running backend,
+    e.g. "https://your-api.onrender.com" — the Socket.IO client is then loaded
+    automatically from that origin.
+  -->
+  <script>window.CPUSIM_API = "";</script>
+</head>
+<body>
+
+<!-- ░░░ LOADER ░░░ -->
+<div id="loader" class="loader-overlay">
+  <div class="loader-ring"></div>
+  <div class="loader-text">Booting CPUSim<span class="dots">...</span></div>
+</div>
+
+<!-- ░░░ NAVBAR ░░░ -->
+<nav class="navbar" id="navbar">
+  <div class="nav-brand">
+    <span class="brand-icon">⬡</span>
+    <span class="brand-name">CPUSim</span>
+  </div>
+  <div class="nav-links">
+    <a href="#processes" class="nav-link">Processes</a>
+    <a href="#simulation" class="nav-link">Simulate</a>
+    <a href="#gantt" class="nav-link">Gantt</a>
+    <a href="#stats" class="nav-link">Stats</a>
+    <a href="#compare" class="nav-link">Compare</a>
+    <a href="#learn" class="nav-link">Learn</a>
+    <a href="#saved" class="nav-link auth-only hidden">My Sims</a>
+    <a href="#admin" class="nav-link admin-only hidden">Admin</a>
+  </div>
+  <div class="nav-actions">
+    <div class="live-clock" id="liveClock"></div>
+    <!-- Socket status indicator -->
+    <span class="socket-status" id="socketStatus" title="Server connection">●</span>
+    <button class="btn-icon" id="themeToggle" title="Toggle Theme">☀</button>
+    <button class="btn-icon" id="fullscreenBtn" title="Fullscreen">⛶</button>
+    <button class="btn-icon" id="soundToggle" title="Sound">♪</button>
+    <!-- Auth buttons -->
+    <div id="authNav" class="auth-nav">
+      <button class="btn-ghost small" onclick="openAuthModal('login')">Login</button>
+      <button class="btn-primary small" onclick="openAuthModal('register')">Sign Up</button>
+    </div>
+    <div id="userNav" class="user-nav hidden">
+      <span class="user-chip" id="userChip">User</span>
+      <button class="btn-ghost small" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ░░░ NOTIFICATION BANNER ░░░ -->
+<div id="notifBanner" class="notif-banner hidden"></div>
+
+<!-- ░░░ HERO ░░░ -->
+<section class="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="cpu-meter-wrap">
+    <canvas id="cpuMeterCanvas" width="120" height="120"></canvas>
+    <div class="cpu-meter-label">CPU</div>
+  </div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">Operating Systems — Full Stack Tool</p>
+    <h1 class="hero-title">
+      <span class="typing-target" id="heroTitle">CPU Scheduling Simulator</span>
+    </h1>
+    <p class="hero-sub">Interactive Operating System Scheduling Visualizer</p>
+    <div class="hero-badges">
+      <span class="badge">FCFS</span><span class="badge">SJF</span>
+      <span class="badge">SRTF</span><span class="badge">Round Robin</span>
+      <span class="badge">Priority</span><span class="badge">MongoDB</span>
+      <span class="badge">Socket.IO</span>
+    </div>
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="scrollToSection('processes')">Get Started</button>
+      <button class="btn-outline" onclick="generateRandom()">Quick Demo</button>
+    </div>
+  </div>
+  <div class="hero-shortcuts">
+    <span class="shortcut-hint"><kbd>Ctrl+R</kbd> Run &nbsp;|&nbsp; <kbd>Ctrl+G</kbd> Random &nbsp;|&nbsp; <kbd>Ctrl+C</kbd> Compare</span>
+  </div>
+</section>
+
+<!-- ░░░ PROCESS INPUT ░░░ -->
+<section class="section" id="processes">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Process Management</h2>
+      <p class="section-sub">Add, edit, and manage processes for simulation</p>
+    </div>
+    <div class="card input-card">
+      <h3 class="card-title">Add Process</h3>
+      <div class="input-grid">
+        <div class="field-group">
+          <label class="field-label">Process ID</label>
+          <input class="field-input" type="text" id="inPid" placeholder="P1" maxlength="6"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Arrival Time</label>
+          <input class="field-input" type="number" id="inArrival" placeholder="0" min="0"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Burst Time</label>
+          <input class="field-input" type="number" id="inBurst" placeholder="5" min="1"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Priority</label>
+          <input class="field-input" type="number" id="inPriority" placeholder="1" min="1"/>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-primary" onclick="addProcess()">＋ Add Process</button>
+        <button class="btn-ghost" onclick="clearInputs()">✕ Clear Inputs</button>
+        <button class="btn-ghost" onclick="generateRandom()">⚡ Random Processes</button>
+        <button class="btn-ghost danger" onclick="clearAll()">🗑 Clear All</button>
+      </div>
+      <div id="inputError" class="error-msg"></div>
+    </div>
+
+    <div class="card table-card">
+      <div class="table-header-row">
+        <h3 class="card-title">Process Queue</h3>
+        <span class="process-count" id="procCount">0 processes</span>
+      </div>
+      <div class="table-wrap">
+        <table class="proc-table" id="procTable">
+          <thead>
+            <tr><th>PID</th><th>Arrival</th><th>Burst</th><th>Priority</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="procTableBody">
+            <tr class="empty-row"><td colspan="6">No processes added yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ SIMULATION CONTROLS ░░░ -->
+<section class="section dark-section" id="simulation">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Simulation Controls</h2>
+      <p class="section-sub">Configure and run the scheduling algorithm</p>
+    </div>
+    <div class="controls-grid">
+      <div class="card control-card">
+        <h3 class="card-title">Algorithm</h3>
+        <select class="field-select" id="algoSelect" onchange="onAlgoChange()">
+          <option value="fcfs">FCFS — First Come First Serve</option>
+          <option value="sjf">SJF — Shortest Job First (NP)</option>
+          <option value="srtf">SRTF — Shortest Remaining Time</option>
+          <option value="rr">Round Robin</option>
+          <option value="priority">Priority Scheduling (NP)</option>
+          <option value="priority_pre">Priority Scheduling (Pre)</option>
+        </select>
+        <div id="rrConfig" class="rr-config hidden">
+          <label class="field-label">Time Quantum</label>
+          <input class="field-input" type="number" id="quantum" value="2" min="1"/>
+        </div>
+        <button class="algo-info-btn" onclick="showAlgoInfo()">ℹ Algorithm Info</button>
+      </div>
+
+      <div class="card control-card">
+        <h3 class="card-title">Simulation Mode</h3>
+        <div class="mode-row">
+          <label class="toggle-label">
+            <input type="checkbox" id="stepMode" class="toggle-cb"/>
+            <span class="toggle-track"></span>
+            Step-by-step mode
+          </label>
+        </div>
+        <div class="speed-row">
+          <label class="field-label">Animation Speed</label>
+          <input type="range" id="speedSlider" min="1" max="5" value="3" class="speed-slider"/>
+          <span id="speedLabel">Normal</span>
+        </div>
+        <div class="mode-row" id="backendModeRow" style="margin-top:.5rem">
+          <label class="toggle-label">
+            <input type="checkbox" id="useBackend" class="toggle-cb" checked/>
+            <span class="toggle-track"></span>
+            Use backend API
+          </label>
+        </div>
+      </div>
+
+      <div class="card control-card run-card">
+        <h3 class="card-title">Execute</h3>
+        <button class="btn-run" id="runBtn" onclick="runSimulation()">▶ Run Simulation</button>
+        <div class="step-controls hidden" id="stepControls">
+          <button class="btn-step" id="pauseBtn" onclick="togglePause()">⏸ Pause</button>
+          <button class="btn-step" onclick="stepForward()">⏭ Step</button>
+          <button class="btn-step" onclick="resetSim()">⏹ Reset</button>
+        </div>
+        <button class="btn-ghost auth-only hidden" style="margin-top:.5rem" onclick="saveCurrentSim()">💾 Save Simulation</button>
+        <button class="btn-ghost" onclick="resetSim()" style="margin-top:.4rem">↺ Reset</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ QUEUE VISUALIZATION ░░░ -->
+<section class="section" id="queues">
+  <div class="container">
+    <div class="section-header"><h2 class="section-title">Process State Visualization</h2></div>
+    <div class="queues-grid">
+      <div class="queue-box">
+        <div class="queue-label">Ready Queue</div>
+        <div class="queue-items" id="readyQueue"></div>
+      </div>
+      <div class="queue-arrow">→</div>
+      <div class="queue-box running-box">
+        <div class="queue-label">CPU (Running)</div>
+        <div class="queue-items" id="runningQueue"></div>
+      </div>
+      <div class="queue-arrow">→</div>
+      <div class="queue-box done-box">
+        <div class="queue-label">Completed</div>
+        <div class="queue-items" id="doneQueue"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ GANTT CHART ░░░ -->
+<section class="section dark-section" id="gantt">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Gantt Chart</h2>
+      <p class="section-sub">Visual execution timeline</p>
+    </div>
+    <div class="card gantt-card">
+      <div id="ganttWrap" class="gantt-wrap">
+        <div class="gantt-placeholder">Run a simulation to see the Gantt chart</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ RESULTS TABLE ░░░ -->
+<section class="section" id="results">
+  <div class="container">
+    <div class="section-header"><h2 class="section-title">Simulation Results</h2></div>
+    <div class="card table-card">
+      <div class="table-wrap">
+        <table class="proc-table result-table" id="resultTable">
+          <thead>
+            <tr><th>PID</th><th>Arrival</th><th>Burst</th><th>Completion</th><th>Turnaround</th><th>Waiting</th><th>Response</th></tr>
+          </thead>
+          <tbody id="resultTableBody"><tr class="empty-row"><td colspan="7">No results yet.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ STATISTICS ░░░ -->
+<section class="section dark-section" id="stats">
+  <div class="container">
+    <div class="section-header"><h2 class="section-title">Performance Statistics</h2></div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">⏱</div><div class="stat-val" id="statAWT">—</div><div class="stat-lbl">Avg Waiting Time</div></div>
+      <div class="stat-card"><div class="stat-icon">🔄</div><div class="stat-val" id="statATAT">—</div><div class="stat-lbl">Avg Turnaround</div></div>
+      <div class="stat-card"><div class="stat-icon">⚡</div><div class="stat-val" id="statART">—</div><div class="stat-lbl">Avg Response Time</div></div>
+      <div class="stat-card"><div class="stat-icon">🖥</div><div class="stat-val" id="statCPU">—</div><div class="stat-lbl">CPU Utilization</div></div>
+      <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-val" id="statTP">—</div><div class="stat-lbl">Throughput</div></div>
+      <div class="stat-card"><div class="stat-icon">⚙</div><div class="stat-val" id="statNP">—</div><div class="stat-lbl">Total Processes</div></div>
+    </div>
+    <div class="card graph-card" style="margin-top:2rem">
+      <h3 class="card-title">Performance Charts</h3>
+      <div class="canvas-row">
+        <div class="canvas-wrap"><p class="canvas-label">Waiting Times</p><canvas id="chartWT" width="380" height="220"></canvas></div>
+        <div class="canvas-wrap"><p class="canvas-label">Turnaround Times</p><canvas id="chartTAT" width="380" height="220"></canvas></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ COMPARE ░░░ -->
+<section class="section" id="compare">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Algorithm Comparison</h2>
+      <p class="section-sub">Run all algorithms and compare performance</p>
+    </div>
+    <div style="text-align:center;margin-bottom:2rem">
+      <button class="btn-primary large" onclick="compareAll()">⚖ Compare All Algorithms</button>
+    </div>
+    <div class="card table-card" id="compareCard" style="display:none">
+      <div class="table-wrap">
+        <table class="proc-table compare-table" id="compareTable">
+          <thead><tr><th>Algorithm</th><th>Avg WT</th><th>Avg TAT</th><th>Avg RT</th><th>CPU Util%</th><th>Throughput</th></tr></thead>
+          <tbody id="compareBody"></tbody>
+        </table>
+      </div>
+      <p class="compare-note" id="compareNote"></p>
+    </div>
+    <div class="card graph-card" id="compareGraphCard" style="display:none;margin-top:2rem">
+      <h3 class="card-title">Comparison Chart — Avg Waiting Time</h3>
+      <canvas id="chartCompare" width="760" height="260"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ SAVED SIMULATIONS ░░░ -->
+<section class="section dark-section auth-only hidden" id="saved">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">My Saved Simulations</h2>
+      <p class="section-sub">Load and re-run previous simulations from the cloud</p>
+    </div>
+    <div class="card table-card">
+      <div class="table-header-row">
+        <h3 class="card-title">Simulation History</h3>
+        <button class="btn-ghost small" onclick="loadSavedSims()">↻ Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table class="proc-table">
+          <thead><tr><th>Name</th><th>Algorithm</th><th>Avg WT</th><th>Avg TAT</th><th>CPU Util</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="savedSimsBody"><tr class="empty-row"><td colspan="7">No saved simulations yet.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ ADMIN DASHBOARD ░░░ -->
+<section class="section admin-only hidden" id="admin">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Admin Dashboard</h2>
+      <p class="section-sub">System-wide analytics and user management</p>
+    </div>
+    <div class="stats-grid" id="adminStats">
+      <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-val" id="adminUsers">—</div><div class="stat-lbl">Total Users</div></div>
+      <div class="stat-card"><div class="stat-icon">📁</div><div class="stat-val" id="adminSims">—</div><div class="stat-lbl">Total Simulations</div></div>
+      <div class="stat-card"><div class="stat-icon">🟢</div><div class="stat-val" id="adminActive">—</div><div class="stat-lbl">Active (7 days)</div></div>
+      <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-val" id="adminMostUsed">—</div><div class="stat-lbl">Most Used Algo</div></div>
+    </div>
+    <div class="card graph-card" style="margin-top:2rem">
+      <h3 class="card-title">Algorithm Usage Distribution</h3>
+      <canvas id="chartAdminAlgo" width="760" height="260"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ EXPORT ░░░ -->
+<section class="section dark-section" id="export">
+  <div class="container">
+    <div class="section-header"><h2 class="section-title">Export</h2></div>
+    <div class="export-row">
+      <button class="btn-primary" onclick="exportJSON()">⬇ Export JSON</button>
+      <button class="btn-primary" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn-primary" onclick="exportPDF()">🖨 Print / PDF</button>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ LEARN ░░░ -->
+<section class="section" id="learn">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Project Report</h2>
+      <p class="section-sub">Understanding CPU scheduling algorithms</p>
+    </div>
+    <div class="card learn-card">
+      <h3 class="learn-h3">What is CPU Scheduling?</h3>
+      <p class="learn-p">CPU scheduling is the process by which the OS decides which process in the ready queue gets the CPU. A good scheduler maximises CPU utilisation while minimising waiting and response times.</p>
+      <div class="algo-grid">
+        <div class="algo-learn-card"><h4>FCFS</h4><p>Processes run in arrival order. Simple but can cause the convoy effect.</p><span class="pro">✔ Simple, fair</span><span class="con">✘ High avg WT</span><span class="use">Batch processing</span></div>
+        <div class="algo-learn-card"><h4>SJF (NP)</h4><p>Shortest burst runs first. Optimal avg WT for static batch.</p><span class="pro">✔ Min avg WT</span><span class="con">✘ Starvation</span><span class="use">Batch systems</span></div>
+        <div class="algo-learn-card"><h4>SRTF</h4><p>Preemptive SJF — preempts if newcomer has shorter remaining burst.</p><span class="pro">✔ Optimal avg WT</span><span class="con">✘ High context switches</span><span class="use">Interactive systems</span></div>
+        <div class="algo-learn-card"><h4>Round Robin</h4><p>Fixed time quantum rotation. Fairness + responsiveness.</p><span class="pro">✔ Fair, responsive</span><span class="con">✘ Quantum choice critical</span><span class="use">Time-sharing OS</span></div>
+        <div class="algo-learn-card"><h4>Priority (NP)</h4><p>Highest priority (lowest number) runs to completion.</p><span class="pro">✔ Critical tasks first</span><span class="con">✘ Starvation possible</span><span class="use">Real-time systems</span></div>
+        <div class="algo-learn-card"><h4>Priority (Pre)</h4><p>Higher-priority arrivals preempt running process immediately.</p><span class="pro">✔ Very responsive</span><span class="con">✘ High switch overhead</span><span class="use">OS kernels</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ FOOTER ░░░ -->
+<footer class="footer">
+  <div class="footer-content">
+    <div class="footer-brand">⬡ CPUSim</div>
+    <p class="footer-text">CPU Scheduling Simulator v2.0 · Full Stack: Node.js + MongoDB + Socket.IO</p>
+    <p class="footer-text small"><kbd>Ctrl+R</kbd> Run · <kbd>Ctrl+G</kbd> Random · <kbd>Ctrl+C</kbd> Compare · <kbd>Ctrl+E</kbd> Export</p>
+  </div>
+</footer>
+
+<!-- ░░░ AUTH MODAL ░░░ -->
+<div class="modal-backdrop hidden" id="authModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeAuthModal()">✕</button>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Login</button>
+      <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Register</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="loginForm">
+      <h3 class="modal-title">Welcome Back</h3>
+      <div class="field-group"><label class="field-label">Email</label><input class="field-input" type="email" id="loginEmail" placeholder="you@example.com"/></div>
+      <div class="field-group" style="margin-top:.8rem"><label class="field-label">Password</label><input class="field-input" type="password" id="loginPassword" placeholder="••••••"/></div>
+      <div id="loginError" class="error-msg"></div>
+      <button class="btn-primary" style="width:100%;margin-top:1rem" onclick="login()">Login</button>
+    </div>
+
+    <!-- Register Form -->
+    <div id="registerForm" class="hidden">
+      <h3 class="modal-title">Create Account</h3>
+      <div class="field-group"><label class="field-label">Username</label><input class="field-input" type="text" id="regUsername" placeholder="johndoe"/></div>
+      <div class="field-group" style="margin-top:.8rem"><label class="field-label">Email</label><input class="field-input" type="email" id="regEmail" placeholder="you@example.com"/></div>
+      <div class="field-group" style="margin-top:.8rem"><label class="field-label">Password</label><input class="field-input" type="password" id="regPassword" placeholder="Min. 6 characters"/></div>
+      <div id="registerError" class="error-msg"></div>
+      <button class="btn-primary" style="width:100%;margin-top:1rem" onclick="register()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ░░░ ALGO INFO MODAL ░░░ -->
+<div class="modal-backdrop hidden" id="algoModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('algoModal')">✕</button>
+    <h3 class="modal-title" id="modalTitle">Algorithm Info</h3>
+    <p class="modal-body" id="modalBody"></p>
+  </div>
+</div>
+
+<!-- ░░░ EDIT MODAL ░░░ -->
+<div class="modal-backdrop hidden" id="editModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+    <h3 class="modal-title">Edit Process</h3>
+    <div class="input-grid">
+      <div class="field-group"><label class="field-label">Arrival Time</label><input class="field-input" type="number" id="editArrival" min="0"/></div>
+      <div class="field-group"><label class="field-label">Burst Time</label><input class="field-input" type="number" id="editBurst" min="1"/></div>
+      <div class="field-group"><label class="field-label">Priority</label><input class="field-input" type="number" id="editPriority" min="1"/></div>
+    </div>
+    <div class="btn-row" style="margin-top:1rem">
+      <button class="btn-primary" onclick="saveEdit()">Save</button>
+      <button class="btn-ghost" onclick="closeModal('editModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ░░░ SAVE SIM MODAL ░░░ -->
+<div class="modal-backdrop hidden" id="saveModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('saveModal')">✕</button>
+    <h3 class="modal-title">Save Simulation</h3>
+    <div class="field-group">
+      <label class="field-label">Simulation Name</label>
+      <input class="field-input" type="text" id="simName" placeholder="My FCFS test" maxlength="80"/>
+    </div>
+    <div class="btn-row" style="margin-top:1rem">
+      <button class="btn-primary" onclick="confirmSave()">💾 Save</button>
+      <button class="btn-ghost" onclick="closeModal('saveModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
