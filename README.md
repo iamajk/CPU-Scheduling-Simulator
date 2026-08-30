@@ -14,7 +14,7 @@ the results.
 
 ## 🔴 Live Demo
 
-**https://YOUR-SITE-NAME.netlify.app**  ← replace after deploying (see [Deployment](#-deployment))
+**https://cpuschedulingsimulator-ajk.netlify.app**
 
 The live demo runs **fully in the browser** — every scheduling feature works with
 no backend. Accounts, cloud save, and the admin dashboard only appear when a
