@@ -41,6 +41,7 @@
     <a href="#stats" class="nav-link">Stats</a>
     <a href="#compare" class="nav-link">Compare</a>
     <a href="#learn" class="nav-link">Learn</a>
+    <a href="#admin-preview" class="nav-link nav-link-accent">Admin View</a>
     <a href="#saved" class="nav-link auth-only hidden">My Sims</a>
     <a href="#admin" class="nav-link admin-only hidden">Admin</a>
   </div>
@@ -354,6 +355,54 @@
     <div class="card graph-card" style="margin-top:2rem">
       <h3 class="card-title">Algorithm Usage Distribution</h3>
       <canvas id="chartAdminAlgo" width="760" height="260"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ░░░ ADMIN VIEW — PUBLIC PREVIEW ░░░ -->
+<!-- Always visible. Shows a visitor how an administrator manages CPUSim.
+     Uses representative sample data; the real #admin section above stays
+     login-protected and is only rendered when the backend is enabled. -->
+<section class="section admin-preview-section" id="admin-preview">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Admin View</h2>
+      <p class="section-sub">How an administrator manages CPUSim</p>
+    </div>
+
+    <div class="preview-note">
+      🛈 <strong>Preview with sample data.</strong> In the full-stack build this panel sits behind an
+      admin login and pulls live numbers from MongoDB. Here it shows what an admin would see and the
+      controls they'd use.
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-val" id="pvUsers">—</div><div class="stat-lbl">Total Users</div></div>
+      <div class="stat-card"><div class="stat-icon">📁</div><div class="stat-val" id="pvSims">—</div><div class="stat-lbl">Total Simulations</div></div>
+      <div class="stat-card"><div class="stat-icon">🟢</div><div class="stat-val" id="pvActive">—</div><div class="stat-lbl">Active (7 days)</div></div>
+      <div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-val" id="pvMostUsed">—</div><div class="stat-lbl">Most Used Algo</div></div>
+    </div>
+
+    <div class="card graph-card" style="margin-top:2rem">
+      <h3 class="card-title">Algorithm Usage Distribution</h3>
+      <canvas id="chartPvAlgo" width="760" height="260"></canvas>
+    </div>
+
+    <div class="card table-card" style="margin-top:2rem">
+      <div class="table-header-row">
+        <h3 class="card-title">User Management</h3>
+        <span class="process-count" id="pvUserCount">—</span>
+      </div>
+      <div class="table-wrap">
+        <table class="proc-table">
+          <thead>
+            <tr><th>User</th><th>Email</th><th>Role</th><th>Sims</th><th>Joined</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="pvUserRows">
+            <tr class="empty-row"><td colspan="6">Loading users…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </section>

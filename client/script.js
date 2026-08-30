@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateAuthUI();
   renderTable();
   setupModalBackdrops();
+  initAdminPreview();
 });
 
 /* ── Hide every server-dependent control when running as the standalone demo ── */
@@ -788,6 +789,64 @@ async function loadAdminStats(){
     const values=Object.values(d.algoTotals||{});
     if(labels.length) drawBarChart('chartAdminAlgo',labels,values,'Usage',COLORS);
   }catch{}
+}
+
+// ════════════════════════════════════════════════════════
+// 17b. ADMIN VIEW — PUBLIC PREVIEW (sample data, read-only)
+//   Lets any visitor see how an admin manages CPUSim without
+//   a backend or an admin login. The real #admin dashboard
+//   above still requires both.
+// ════════════════════════════════════════════════════════
+const ADMIN_PREVIEW = {
+  totalUsers:  128,
+  totalSims:   1463,
+  recentUsers: 37,
+  mostUsed:    'rr',
+  algoTotals:  { FCFS:312, SJF:241, SRTF:198, RR:405, 'PRIORITY':187, 'PRIORITY-PRE':120 },
+  users: [
+    { name:'alice',   email:'alice@example.com',   role:'admin', sims:84, joined:'Jan 2025' },
+    { name:'bob',     email:'bob@example.com',     role:'user',  sims:41, joined:'Feb 2025' },
+    { name:'charlie', email:'charlie@example.com', role:'user',  sims:23, joined:'Mar 2025' },
+    { name:'divya',   email:'divya@example.com',   role:'user',  sims:57, joined:'Apr 2025' },
+    { name:'ekene',   email:'ekene@example.com',   role:'user',  sims:12, joined:'May 2025' }
+  ]
+};
+
+function renderAdminPreview() {
+  animateCounter('pvUsers',  ADMIN_PREVIEW.totalUsers);
+  animateCounter('pvSims',   ADMIN_PREVIEW.totalSims);
+  animateCounter('pvActive', ADMIN_PREVIEW.recentUsers);
+  document.getElementById('pvMostUsed').textContent = ADMIN_PREVIEW.mostUsed.toUpperCase();
+
+  const labels = Object.keys(ADMIN_PREVIEW.algoTotals);
+  const values = Object.values(ADMIN_PREVIEW.algoTotals);
+  drawBarChart('chartPvAlgo', labels, values, 'Usage', COLORS);
+
+  document.getElementById('pvUserCount').textContent =
+    `${ADMIN_PREVIEW.users.length} of ${ADMIN_PREVIEW.totalUsers} users`;
+  document.getElementById('pvUserRows').innerHTML = ADMIN_PREVIEW.users.map(u => `
+    <tr>
+      <td><span class="pid-chip" style="background:${u.role === 'admin' ? 'var(--accent3)' : 'var(--accent2)'}">${u.name[0].toUpperCase()}</span> ${u.name}</td>
+      <td>${u.email}</td>
+      <td><span class="role-badge role-${u.role}">${u.role}</span></td>
+      <td>${u.sims}</td>
+      <td>${u.joined}</td>
+      <td>
+        <button class="action-btn" onclick="adminPreviewAction()">${u.role === 'admin' ? 'Demote' : 'Promote'}</button>
+        <button class="action-btn del" onclick="adminPreviewAction()">Suspend</button>
+      </td>
+    </tr>`).join('');
+}
+
+function adminPreviewAction() {
+  showToast('Preview only — connect a backend to manage real users', 'warn');
+}
+
+function initAdminPreview() {
+  renderAdminPreview();
+  // Replay the count-up animation whenever a visitor jumps to the section.
+  document.querySelector('.nav-link[href="#admin-preview"]')
+    ?.addEventListener('click', () => setTimeout(renderAdminPreview, 350));
 }
 
 // ════════════════════════════════════════════════════════
